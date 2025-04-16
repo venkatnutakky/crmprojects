@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="51fdc4e1-05d6-4cb0-bbf6-9846231f58fb" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<file:config name="File_Config" doc:name="File Config" doc:id="7c72cb7c-1193-4965-91e1-c5f65333ea2b" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="fade1b06-ec29-4585-aab8-3ac5429a4115" >
+		<http:request-connection host="api.open-notify.org" port="80"/>
+	</http:request-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="bbd63e31-8fb6-4634-b0bc-a37dd91671a3" >
+		<db:derby-connection database="mydb" create="true" />
+	</db:config>
+	<flow name="cmrsprojectsFlow" doc:id="099e51da-96f6-47bf-9a5a-089de8bb3346" >
+		<http:listener doc:name="Listener" doc:id="9a6699bc-ef9c-4880-87e7-8b4a2f77588d" config-ref="HTTP_Listener_config" path="hello"/>
+		<logger level="INFO" doc:name="TimeLogger" doc:id="7de795fb-40ad-4572-ada3-2b8f14cdb2eb" message='#["Current Hour:" ++ now().hour as String]'/>
+		<choice doc:name="Choice" doc:id="73f245ac-a6ed-490e-a84f-34f45a647a44" >
+			<when expression="#[now().hour &lt; 12]">
+				<set-payload value="#['Good Morning,' ++ attributes.queryParams.name]" doc:name="Set Payload" doc:id="936fc1f5-24ac-461a-aa64-b2d05ece13d4" />
+			</when>
+			<when expression="now().hour &gt;=12 and now().hour &lt;18">
+				<set-payload value="#['Good Afternoon,' ++ attributes.queryParams.name]" doc:name="Set Payload" doc:id="3fd9279b-7be4-462d-8185-4c830df6cf2e" />
+			</when>
+			<otherwise >
+				<set-payload value="#['Good Evening, ' ++ attributes.queryParams.name]" doc:name="Set Payload" doc:id="0ba393fc-8c07-4587-aea8-da58d0fe61e2" />
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="Log Payload" doc:id="31177333-c402-4900-8474-7025d18f8542" message="#['Payload is now:' ++ payload]"/>
+	</flow>
+	<flow name="FileFlow" doc:id="2a49eb4e-9b33-4953-9487-f09aa685e787" >
+		<http:listener doc:name="Listener" doc:id="966ddce4-5487-4c73-93cf-448f19eb6190" config-ref="HTTP_Listener_config" path="read-file"/>
+		<file:read doc:name="Read" doc:id="bd9c1bd5-fc96-4a4b-a0a1-e09e198c6429" config-ref="File_Config" path="C:\mulesoft\projects\MuleInput.txt"/>
+		<logger level="INFO" doc:name="Logger" doc:id="47fa9cfe-361a-4298-877c-8be1416e9733" message='#["File content read:" ++ payload]'/>
+		<ee:transform doc:name="Transform Message" doc:id="cfa6ccfe-d5fb-4666-acd8-1d7dec1551e6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	originalContent: payload,
+	processedAt: now() as String
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<file:write doc:name="Write" doc:id="d50b51ca-d2b2-4aca-b0c0-d0bf9749bbd2" config-ref="File_Config" path="C:\mulesoft\projects\MuleOutput.txt"/>
+		<logger level="INFO" doc:name="Logger" doc:id="e65fa267-02fe-4429-8fe3-112070e5a49f" message='#["File has been written successfully"]'/>
+	</flow>
+	<flow name="ExternalApiFlow" doc:id="071ede15-8df6-4c07-ba8c-b2887236b84c" >
+		<http:listener doc:name="Listener" doc:id="b5b16868-8182-4487-a4ef-3cb9d2711aa1" config-ref="HTTP_Listener_config" path="external-api"/>
+		<http:request method="GET" doc:name="Request" doc:id="33702a7f-a5be-47a4-8d7b-14e620acb73c" config-ref="HTTP_Request_configuration" path="/astros.json"/>
+		<logger level="INFO" doc:name="Logger" doc:id="1ce643df-03d0-4a47-b20b-3c68a5733e75" message='#["Response from API:" ++ write(payload, "application/json")]'/>
+		<ee:transform doc:name="Transform Message" doc:id="97cf0f92-7aee-4c35-9de1-c4548a845b96" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	totalAstronauts: payload.number,
+	astronauts:payload.people map
+	((person)->{name:person.name,
+		craft:person.craft
+	})	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="DatabaseConFlow" doc:id="ef4d64a2-5a30-4ab7-b474-ab161eba65db" >
+		<http:listener doc:name="Employees" doc:id="bb8c3186-14d3-41d7-82f2-14192a580d97" config-ref="HTTP_Listener_config" path="delete-employee" outputMimeType="; query=Id" allowedMethods="GET"/>
+		<ee:transform doc:name="Transform Message" doc:id="2d471e13-7cde-4be1-9272-83cfd9f4e865" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
