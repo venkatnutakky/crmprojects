@@ -14,8 +14,8 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="fade1b06-ec29-4585-aab8-3ac5429a4115" >
 		<http:request-connection host="api.open-notify.org" port="80"/>
 	</http:request-config>
-	<db:config name="Database_Config" doc:name="Database Config" doc:id="bbd63e31-8fb6-4634-b0bc-a37dd91671a3" >
-		<db:derby-connection database="mydb" create="true" />
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="982d7703-dba8-4e6a-aedd-b05fed78c29a" >
+		<db:derby-connection database="C:\mulesoft\projects\derbydb\mydb" create="true"/>
 	</db:config>
 	<flow name="cmrsprojectsFlow" doc:id="099e51da-96f6-47bf-9a5a-089de8bb3346" >
 		<http:listener doc:name="Listener" doc:id="9a6699bc-ef9c-4880-87e7-8b4a2f77588d" config-ref="HTTP_Listener_config" path="hello"/>
@@ -51,6 +51,23 @@ output application/json
 		<file:write doc:name="Write" doc:id="d50b51ca-d2b2-4aca-b0c0-d0bf9749bbd2" config-ref="File_Config" path="C:\mulesoft\projects\MuleOutput.txt"/>
 		<logger level="INFO" doc:name="Logger" doc:id="e65fa267-02fe-4429-8fe3-112070e5a49f" message='#["File has been written successfully"]'/>
 	</flow>
+	<!-- <flow name="DatabaseSelectFlow" doc:id="3af371e6-ee9a-4dab-9d38-4754cb7161f7" >
+		<http:listener doc:name="Listener" doc:id="00564c4a-8fa2-4db0-9721-ce3f667aefc9" config-ref="HTTP_Listener_config" path="workers"/>
+		<db:execute-ddl doc:name="CreateTable" doc:id="92f6e733-5198-462c-a881-2343edae7a65" config-ref="Database_Config">
+			<db:sql ><![CDATA[CREATE TABLE workers (
+  id INT PRIMARY KEY,
+  name VARCHAR(100)
+)
+]]></db:sql>
+		</db:execute-ddl>
+		<db:insert doc:name="Insert" doc:id="6d013318-c2fa-4637-b88d-cd684edd6210" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO workers (id, name) VALUES (1, 'Alice')]]></db:sql>
+		</db:insert>
+		<db:insert doc:name="Insert" doc:id="7449c821-d17d-4f9f-8ff3-a1107d96d762" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO workers (id, name) VALUES (2, 'Bob')]]></db:sql>
+		</db:insert>
+	</flow> -->
+
 	<flow name="ExternalApiFlow" doc:id="071ede15-8df6-4c07-ba8c-b2887236b84c" >
 		<http:listener doc:name="Listener" doc:id="b5b16868-8182-4487-a4ef-3cb9d2711aa1" config-ref="HTTP_Listener_config" path="external-api"/>
 		<http:request method="GET" doc:name="Request" doc:id="33702a7f-a5be-47a4-8d7b-14e620acb73c" config-ref="HTTP_Request_configuration" path="/astros.json"/>
@@ -70,9 +87,16 @@ output application/json
 			</ee:message>
 		</ee:transform>
 	</flow>
-	<flow name="DatabaseConFlow" doc:id="ef4d64a2-5a30-4ab7-b474-ab161eba65db" >
-		<http:listener doc:name="Employees" doc:id="bb8c3186-14d3-41d7-82f2-14192a580d97" config-ref="HTTP_Listener_config" path="delete-employee" outputMimeType="; query=Id" allowedMethods="GET"/>
-		<ee:transform doc:name="Transform Message" doc:id="2d471e13-7cde-4be1-9272-83cfd9f4e865" >
+	<flow name="DatabaseSelectFlow" doc:id="ed10e84a-ce7d-4dc5-aa9c-c53ff3490ee8" >
+		<http:listener doc:name="Listener" doc:id="01039d38-a777-4ec0-842d-f4292a027695" config-ref="HTTP_Listener_config" path="developer"/>
+		<!-- <db:insert doc:name="Insert" doc:id="c0b1cd31-f0c9-415c-b353-73c6d1cb3dd0" config-ref="Database_Config">
+			<db:sql><![CDATA[INSERT INTO DEVELOPER (ID, NAME) VALUES (1, 'Raja Nutakky')]]></db:sql>
+		</db:insert>-->
+		<db:select doc:name="Select" doc:id="59852955-7d99-4da1-8a5b-0ffed069e8a5" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM DEVELOPER]]></db:sql>
+		</db:select>
+		<logger level="INFO" doc:name="Logger" doc:id="6e42cc62-4e88-47e5-a341-236f0d763cc6" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="46131439-90ab-4428-8a92-9cabc629b947" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
